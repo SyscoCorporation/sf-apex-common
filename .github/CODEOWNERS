@@ -1,0 +1,5 @@
+# These owners will be the default owners for everything in
+# the repo.
+
+*                   @SyscoCorporation/crm-admin
+sfdx-project.json   @github-bot

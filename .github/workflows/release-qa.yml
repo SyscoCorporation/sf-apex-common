@@ -1,0 +1,52 @@
+# Unique name for this workflow
+name: Salesforce DX - QA Release
+
+# Workflow starts release actions are fired.
+on:
+  release:
+    types: [prereleased]
+
+# Jobs to be executed
+jobs:
+  release-qa:
+    if: 'github.event.release.prerelease'
+    name: Deploy to QA Environments
+    runs-on: ubuntu-latest
+    steps:
+      # Install Salesforce CLI
+      - name: Install Salesforce CLI
+        run: |
+          wget https://developer.salesforce.com/media/salesforce-cli/sfdx-linux-amd64.tar.xz
+          mkdir sfdx-cli
+          tar xJf sfdx-linux-amd64.tar.xz -C sfdx-cli --strip-components 1
+          ./sfdx-cli/install
+      # Checkout the code in the pull request
+      - name: 'Checkout source code'
+        uses: actions/checkout@v2
+
+      # Store secret for dev hub
+      - name: 'Populate auth file with DEVHUB_SFDX_URL secret'
+        shell: bash
+        run: 'echo ${{ secrets.DEVHUB_SFDX_URL}} > ./DEVHUB_SFDX_URL.txt'
+
+      # Authenticate dev hub
+      - name: 'Authenticate DEVHUB Org'
+        run: 'sfdx force:auth:sfdxurl:store -f ./DEVHUB_SFDX_URL.txt -a qa -d'
+
+      # Get Version Number
+      - name: 'Get Latest Package Version'
+        id: getPackageVersion
+        run: echo "::set-output name=latestVersion::$(sfdx force:package:version:list -p "${{ secrets.PACKAGE_NAME}}" -o CreatedDate --concise | tail -1 | awk '{print $3}')"
+
+      # Store secret for QA
+      - name: 'Populate auth file with QA_SFDX_URL secret'
+        shell: bash
+        run: 'echo ${{ secrets.QA_SFDX_URL}} > ./QA_SFDX_URL.txt'
+
+      # Authenticate QA
+      - name: 'Authenticate QA Org'
+        run: 'sfdx force:auth:sfdxurl:store -f ./QA_SFDX_URL.txt -a qa -d'
+
+      # Deploy package to Staging
+      - name: 'Install package to QA Env'
+        run: 'sfdx force:package:install -p ${{ steps.getPackageVersion.outputs.latestVersion }} -u qa --wait 60 --installationkey ${{ secrets.PACKAGE_CODE }} -a package'

@@ -1,0 +1,126 @@
+# Unique name for this workflow
+name: Salesforce DX - PROD Release
+
+# Workflow starts release actions are fired.
+on:
+  release:
+    types: [released]
+
+# Jobs to be executed
+jobs:
+  release-prod:
+    if: '!github.event.release.prerelease'
+    name: Deploy to Prod Environments
+    runs-on: ubuntu-latest
+    steps:
+      # Install Salesforce CLI
+      - name: Install Salesforce CLI
+        run: |
+          wget https://developer.salesforce.com/media/salesforce-cli/sfdx-linux-amd64.tar.xz
+          mkdir sfdx-cli
+          tar xJf sfdx-linux-amd64.tar.xz -C sfdx-cli --strip-components 1
+          ./sfdx-cli/install
+      # Checkout the code in the pull request
+      - name: 'Checkout source code'
+        uses: actions/checkout@v2
+
+      # Setup node
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: '12'
+          check-latest: true
+
+      # Install npm dependencies
+      - name: 'Install npm dependencies'
+        run: npm install -g semver
+
+      # Store secret for dev hub
+      - name: 'Populate auth file with DEVHUB_SFDX_URL secret'
+        shell: bash
+        run: 'echo ${{ secrets.DEVHUB_SFDX_URL}} > ./DEVHUB_SFDX_URL.txt'
+
+      # Authenticate dev hub
+      - name: 'Authenticate Dev Hub'
+        run: 'sfdx force:auth:sfdxurl:store -f ./DEVHUB_SFDX_URL.txt -a devhub -d'
+
+      # Get Version Number
+      - name: 'Get Latest Package Version'
+        id: getPackageVersion
+        run: echo "::set-output name=latestVersion::$(sfdx force:package:version:list -p "${{ secrets.PACKAGE_NAME}}" -o CreatedDate --concise | tail -1 | awk '{print $2}')"
+
+      # Bump Version Number
+      - name: 'Bump Latest Package Version'
+        id: bumpLatestPackageVersion
+        run: |
+          set +e
+          sfdxVersionNumber=${{ steps.getPackageVersion.outputs.latestVersion }}
+          versionNumber=${sfdxVersionNumber%.*}
+          echo "::set-output name=patchVersion::$(semver -i patch $versionNumber).1"
+      # Create package version and extract its id
+      - name: Create package version
+        id: createPackageVersion
+        run: |
+          set +e
+          json=$(sfdx force:package:version:create -p "${{ secrets.PACKAGE_NAME}}" --installationkey "${{ secrets.PACKAGE_CODE }}" --definitionfile config/project-scratch-def.json --json --wait 60 --codecoverage -n ${{ steps.bumpLatestPackageVersion.outputs.patchVersion }})
+          echo $json
+          status=$(echo $json | jq '.status')
+          if [ $status == "0" ]; then
+              packageVersionId=$(echo $json | jq -r '.result.SubscriberPackageVersionId')
+              echo "::set-output name=packageVersionId::$packageVersionId"
+          else
+              echo "sfdx force:package:version:create failed"
+          fi
+          exit $status
+      # Promote package
+      - name: 'Promote version'
+        run: 'echo y | sfdx force:package:version:promote -p ${{ steps.createPackageVersion.outputs.packageVersionId }}'
+
+      # Deploy package to Production
+      - name: 'Install package to Prod Env'
+        run: 'sfdx force:package:install -p ${{ steps.createPackageVersion.outputs.packageVersionId }} -u devhub --wait 60 --installationkey ${{ secrets.PACKAGE_CODE }} -a package'
+
+      # Create a release
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.createPackageVersion.outputs.packageVersionId }}
+          release_name: Release ${{ steps.createPackageVersion.outputs.packageVersionId }}
+          body: Release ${{ steps.createPackageVersion.outputs.packageVersionId }}
+          prerelease: false
+
+      # Create PR for new package version
+      - name: 'Create PR for new package version'
+        id: create-pr
+        uses: peter-evans/create-pull-request@v3
+        with:
+          title: 'Released new package version ${{ steps.bumpLatestPackageVersion.outputs.patchVersion }}'
+          body: 'Released new package version ${{ steps.createPackageVersion.outputs.packageVersionId }}'
+          commit-message: 'Released new package version ${{ steps.createPackageVersion.outputs.packageVersionId }}'
+          branch: 'auto/release-package-version'
+          delete-branch: true
+
+      # Generate Workflow Token
+      - name: 'Generate Token for PR actions'
+        uses: tibdex/github-app-token@v1
+        id: generate-token
+        with:
+          app_id: ${{ secrets.WORKFLOW_APP_ID }}
+          private_key: ${{ secrets.WORKFLOW_APP_PRIVATE_KEY }}
+
+      # Approve pull request
+      - name: 'Approve Pull Request'
+        uses: juliangruber/approve-pull-request-action@v1
+        with:
+          github-token: ${{ steps.generate-token.outputs.token }}
+          number: ${{ steps.create-pr.outputs.pull-request-number }}
+
+      # Merge pull request
+      - name: 'Merge pull request'
+        uses: juliangruber/merge-pull-request-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          number: ${{ steps.create-pr.outputs.pull-request-number }}
+          method: squash
