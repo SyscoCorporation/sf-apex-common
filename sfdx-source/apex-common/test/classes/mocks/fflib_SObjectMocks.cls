@@ -48,6 +48,27 @@ public class fflib_SObjectMocks
 		}
 	}
 
+
+	public virtual class RecordTypeSObjectDomain extends SObjectDomain
+	{
+		private fflib_ApexMocks mocks;
+
+		public RecordTypeSObjectDomain(fflib_ApexMocks mocks)
+		{
+			super(mocks);
+		}
+
+		public void setFilter(String recordTypeName) { 
+			 mocks.mockVoidMethod(this, 'setFilter', new List<Type> {}, new List<Object> {});
+		}
+
+		public List<SObject> getFilteredRecords()
+		{
+			return (List<SObject>) mocks.mockNonVoidMethod(this, 'getFilteredRecords', new List<Type> {}, new List<Object> {});
+		}
+
+	}
+
 	public virtual class SObjectSelector implements fflib_ISObjectSelector
 	{
 		private fflib_ApexMocks mocks;
