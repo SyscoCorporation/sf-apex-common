@@ -1,28 +1,31 @@
 {
-  "packageDirectories": [
-    {
-      "path": "sfdx-source/apex-common",
-      "package": "Apex Enterprise Patterns",
-      "versionName": "ver 0.1",
-      "versionNumber": "0.1.3.NEXT",
-      "default": true,
-      "dependencies": [
+    "packageDirectories": [
         {
-          "package": "ApexMocks Framework",
-          "versionNumber": "0.1.2.LATEST"
+            "path": "sfdx-source/apex-common",
+            "package": "Apex Enterprise Patterns",
+            "versionName": "ver 0.1",
+            "versionNumber": "0.1.4.NEXT",
+            "default": true,
+            "dependencies": [
+                {
+                    "package": "ApexMocks Framework",
+                    "versionNumber": "0.1.2.LATEST"
+                }
+            ]
         }
-      ]
+    ],
+    "namespace": "",
+    "sfdcLoginUrl": "https://login.salesforce.com",
+    "sourceApiVersion": "48.0",
+    "packageAliases": {
+        "ApexMocks Framework": "0Ho0y000000PAtLCAW",
+        "Apex Enterprise Patterns": "0Ho0y000000PAtGCAW",
+        "Apex Enterprise Patterns@0.1.0-1": "04t0y000000u3k9AAA",
+        "Apex Enterprise Patterns@0.1.0-2": "04t0y000000u3kOAAQ",
+        "Apex Enterprise Patterns@0.1.1-1": "04t0y000001AfPxAAK",
+        "Apex Enterprise Patterns@0.1.2-1": "04t0y000001AfQWAA0",
+        "Apex Enterprise Patterns@0.1.4-1": "04t0y000000jaEhAAI",
+        "Apex Enterprise Patterns@0.1.4-2": "04t0y000000jaEmAAI",
+        "Apex Enterprise Patterns@0.1.4-3": "04t0y000000jaErAAI"
     }
-  ],
-  "namespace": "",
-  "sfdcLoginUrl": "https://login.salesforce.com",
-  "sourceApiVersion": "48.0",
-  "packageAliases": {
-    "ApexMocks Framework": "0Ho0y000000PAtLCAW",
-    "Apex Enterprise Patterns": "0Ho0y000000PAtGCAW",
-    "Apex Enterprise Patterns@0.1.0-1": "04t0y000000u3k9AAA",
-    "Apex Enterprise Patterns@0.1.0-2": "04t0y000000u3kOAAQ",
-    "Apex Enterprise Patterns@0.1.1-1": "04t0y000001AfPxAAK",
-    "Apex Enterprise Patterns@0.1.2-1": "04t0y000001AfQWAA0"
-  }
 }
