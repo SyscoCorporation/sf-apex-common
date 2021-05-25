@@ -3,13 +3,16 @@ public virtual class fflib_RecordTypeSObjectDomain  extends fflib_SObjectDomain 
         super(sObjectList);
 	}
 
+	/**
+	 * Takes a list of sobjects and the record types developername and filters based on that information
+	 */
 	public fflib_RecordTypeSObjectDomain(List<sObject> sObjectList, String recordTypeName) {
         super(setFilter(sObjectList, recordTypeName), sObjectList.getSObjectType());
 	}
     
 	private static List<SObject> setFilter(List<sObject> sObjectList, String recordTypeName) {
 		List<SObject> mapOverride = new List<SObject>();
-		String recordTypeIdFilter = sObjectList.getSObjectType().getDescribe()?.getRecordTypeInfosByName()?.get(recordTypeName)?.getRecordTypeId();
+		String recordTypeIdFilter = sObjectList.getSObjectType().getDescribe()?.getRecordTypeInfosByDeveloperName()?.get(recordTypeName)?.getRecordTypeId();
 
 		for(sObject o : sObjectList) {
 			String sObjRecType = o.isSet('RecordTypeId') ? o.get('RecordTypeId').ToString() : null;
